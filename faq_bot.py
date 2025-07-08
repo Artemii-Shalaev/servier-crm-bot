@@ -1,34 +1,67 @@
-import os
-import ssl
-import certifi
+import telebot;
+from telebot import types
+bot = telebot.TeleBot('7632100037:AAGqFsETXTWJc6QPiYcDBzNHDPqVOdhxDvY');
 
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+@bot.message_handler(content_types=['text'])
+def get_text_messages(message):
+@bot.message_handler(content_types=['text', 'document', 'audio'])
+if message.text == "Привет":
+    bot.send_message(message.from_user.id, "Привет, чем я могу тебе помочь?")
+elif message.text == "/help":
+    bot.send_message(message.from_user.id, "Напиши привет")
+else:
+    bot.send_message(message.from_user.id, "Я тебя не понимаю. Напиши /help.")
+bot.polling(none_stop=True, interval=0)
+name = '';
+surname = '';
+age = 0;
+@bot.message_handler(content_types=['text'])
+def start(message):
+    if message.text == '/reg':
+        bot.send_message(message.from_user.id, "Как тебя зовут?");
+        bot.register_next_step_handler(message, get_name); #следующий шаг – функция get_name
+    else:
+        bot.send_message(message.from_user.id, 'Напиши /reg');
 
-# SSL-контекст
-ssl._create_default_https_context = ssl.create_default_context(cafile=certifi.where())
+def get_name(message): #получаем фамилию
+    global name;
+    name = message.text;
+    bot.send_message(message.from_user.id, 'Какая у тебя фамилия?');
+    bot.register_next_step_handler(message, get_surnme);
 
-# Словарь часто задаваемых вопросов
-FAQ = {
-    "привет": "Здравствуйте! Чем могу помочь?",
-    "crm": "Система CRM Servier позволяет автоматизировать работу медицинских представителей.",
-    "отчет": "Вы можете сформировать отчет через вкладку 'Отчеты' в интерфейсе CRM.",
-    "поддержка": "Обратитесь в техническую поддержку через корпоративную почту или HelpDesk."
-}
+def get_surname(message):
+    global surname;
+    surname = message.text;
+    bot.send_message('Сколько тебе лет?');
+    bot.register_next_step_handler(message, get_age);
 
-# Обработка входящих сообщений
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text.lower()
-    response = None
-    for question, answer in FAQ.items():
-        if question in user_message:
-            response = answer
-            break
-    if not response:
-        response = "Извините, я пока не знаю ответа на этот вопрос."
-    await update.message.reply_text(response)
+def get_age(message):
+    global age;
+    while age == 0: #проверяем что возраст изменился
+        try:
+             age = int(message.text) #проверяем, что возраст введен корректно
+        except Exception:
+             bot.send_message(message.from_user.id, 'Цифрами, пожалуйста');
+      bot.send_message(message.from_user.id, 'Тебе '+str(age)+' лет, тебя зовут '+name+' '+surname+'?')
+def get_age(message):
+    global age;
+    while age == 0: #проверяем что возраст изменился
+        try:
+             age = int(message.text) #проверяем, что возраст введен корректно
+        except Exception:
+             bot.send_message(message.from_user.id, 'Цифрами, пожалуйста');
+      keyboard = types.InlineKeyboardMarkup(); #наша клавиатура
+      key_yes = types.InlineKeyboardButton(text='Да', callback_data='yes'); #кнопка «Да»
+      keyboard.add(key_yes); #добавляем кнопку в клавиатуру
+      key_no= types.InlineKeyboardButton(text='Нет', callback_data='no');
+      keyboard.add(key_no);
+      question = 'Тебе '+str(age)+' лет, тебя зовут '+name+' '+surname+'?';
+      bot.send_message(message.from_user.id, text=question, reply_markup=keyboard)
 
-# Запуск бота
-app = ApplicationBuilder().token(os.environ.get("TELEGRAM_BOT_TOKEN")).build()
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-app.run_polling()
+@bot.callback_query_handler(func=lambda call: True)
+def callback_worker(call):
+    if call.data == "yes": #call.data это callback_data, которую мы указали при объявлении кнопки
+        .... #код сохранения данных, или их обработки
+        bot.send_message(call.message.chat.id, 'Запомню : )');
+    elif call.data == "no":
+         ... #переспрашиваем
